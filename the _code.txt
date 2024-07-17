@@ -1,0 +1,223 @@
+#import your necessary libraries 
+
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
+import joblib
+from imblearn.over_sampling import SMOTE
+import matplotlib.pyplot as plt
+import seaborn as sns  
+
+
+# load your dataset
+
+df = pd.read_csv('C:\\Users\\KCT\\Downloads\\candidates_tweets.csv')
+df
+
+#displaying first ten rows 
+
+df.head(10)
+
+# create clean_function to clean your dataset like removing hastags.
+
+def clean_text(text):
+    import re
+    text = re.sub(r'http\S+', '', text)  # Remove URLs
+    text = re.sub(r'@\w+', '', text)     # Remove mentions
+    text = re.sub(r'#\w+', '', text)     # Remove hashtags
+    text = re.sub(r'\d+', '', text)      # Remove numbers
+    text = re.sub(r'[^\w\s]', '', text)  # Remove punctuation
+    text = text.lower().strip()          # Convert to lowercase and strip whitespaces
+    return text
+
+
+# Clean the tweets
+
+df['cleaned_tweet'] = df['tweet'].apply(clean_text)
+
+
+# Feature extraction
+
+vectorizer = TfidfVectorizer(max_features=1000)
+X = vectorizer.fit_transform(df['cleaned_tweet'])
+
+
+# Encode the labels
+
+df['Candidate_encoded'] = df['Candidate'].map({'Farmaajo': 0, 'Hassan Sheikh': 1,})
+y = df['Candidate_encoded']
+
+
+
+
+#split your dataset into training and testing 
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+
+# Address class implance in your datset 
+
+smote = SMOTE(random_state=42)
+X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
+
+
+
+# Train you preferred model 
+
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_resampled, y_resampled)
+
+
+
+# Evaluate model performance 
+
+y_pred = model.predict(X_test)
+print(classification_report(y_test, y_pred))
+
+
+
+# Save the machine learning model you trained 
+
+joblib.dump(model, 'election_prediction_rf_model.pkl')
+joblib.dump(vectorizer, 'tfidf_vectorizer.pkl')
+
+
+
+# Calculate the count of each unique value in the 'predicted_candidate' column of the new_tweets DataFrame.
+# This will give us the number of predictions for each candidate.
+
+prediction_counts = new_tweets['predicted_candidate'].value_counts()
+
+
+
+#printing prediction counts 
+
+print("Prediction Counts:")
+print(prediction_counts) 
+
+
+
+# showing prediction counts in barplot 
+
+plt.figure(figsize=(10, 6))
+sns.barplot(x=prediction_counts.values, y=prediction_counts.index, orient='h')
+plt.title("Prediction Counts")
+plt.xlabel("Count")
+plt.ylabel("Prediction")
+plt.show()
+
+
+# Determine the predicted winner
+if not prediction_counts.empty:
+    predicted_winner = prediction_counts.idxmax()
+    print(f"Predicted winner: {predicted_winner}")
+
+
+
+# Check the class distribution in the training data
+print("Class distribution in the training data:")
+print(y_train.value_counts())
+
+
+# displaying Class Distribution in the Training Data in a graph
+
+plt.figure(figsize=(10, 6))
+sns.countplot(x=y_train)
+plt.title("Class Distribution in the Training Data")
+plt.xlabel("Class")
+plt.ylabel("Frequency")
+plt.show()
+
+
+# Check the class distribution in the entire dataset
+
+print("Class distribution in the entire dataset:")
+print(df['Candidate_encoded'].value_counts())
+
+
+
+# displaying Class Distribution in the Training Data in a pie charht
+plt.figure(figsize=(10, 6))
+plt.pie(class_distribution, labels=class_distribution.index, autopct='%1.1f%%', startangle=140)
+plt.title("Class Distribution in the Entire Dataset")
+plt.show()
+
+
+
+# Evaluating metrics performances and printing it 
+
+conf_matrix = confusion_matrix(y_test, y_pred)
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred)
+recall = recall_score(y_test, y_pred)
+f1 = f1_score(y_test, y_pred)
+
+print("Confusion Matrix:")
+print(conf_matrix)
+print(f"Accuracy: {accuracy}")
+print(f"Precision: {precision}")
+print(f"Recall: {recall}")
+print(f"F1 Score: {f1}")
+
+
+
+# displaying supports that each candidate got. 
+
+plt.figure(figsize=(10, 6))
+sns.barplot(x=candidate_counts.index, y=candidate_counts.values, palette='viridis')
+
+
+# displaying the occurrence words in the dataset in wordCloud. 
+
+import pandas as pd
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+
+# Load the dataset
+file_path = 'C:\\Users\\KCT\\Downloads\\candidates_tweets.csv'
+tweets_df = pd.read_csv(file_path)
+
+# Function to preprocess and clean text
+def preprocess_text(text):
+    if text is None:
+        return ""
+    # Convert to lowercase
+    text = text.lower()
+    # Remove punctuation and special characters
+    text = ''.join(e for e in text if e.isalnum() or e.isspace())
+    return text
+
+# Apply preprocessing to the 'cleaned_tweet' column
+tweets_df['cleaned_tweet'] = tweets_df['cleaned_tweet'].apply(preprocess_text)
+
+# Separate tweets by candidate
+farmaajo_tweets = ' '.join(tweets_df[tweets_df['Candidate'] == 'Farmaajo']['cleaned_tweet'])
+hassan_sheikh_tweets = ' '.join(tweets_df[tweets_df['Candidate'] == 'Hassan Sheikh']['cleaned_tweet'])
+
+# Generate word clouds
+wordcloud_farmaajo = WordCloud(width=800, height=400, background_color='white').generate(farmaajo_tweets)
+wordcloud_hassan_sheikh = WordCloud(width=800, height=400, background_color='white').generate(hassan_sheikh_tweets)
+
+# Plot word clouds side by side
+fig, axes = plt.subplots(1,  2, figsize=(20, 10))
+
+axes[0].imshow(wordcloud_farmaajo, interpolation='bilinear')
+axes[0].set_title('Farmaajo', fontsize=20)
+axes[0].axis('off')
+
+axes[1].imshow(wordcloud_hassan_sheikh, interpolation='bilinear')
+axes[1].set_title('Hassan Sheikh', fontsize=20)
+axes[1].axis('off')
+
+plt.show()
+ 	
+
+
+
+
+
+
+
+
